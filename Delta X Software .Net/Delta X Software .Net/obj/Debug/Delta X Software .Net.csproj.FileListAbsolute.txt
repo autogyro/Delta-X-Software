@@ -1,0 +1,9 @@
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\bin\Debug\Delta_X_Software.Net.exe.config
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\bin\Debug\Delta_X_Software.Net.exe
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\bin\Debug\Delta_X_Software.Net.pdb
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\obj\Debug\Delta X Software .Net.csprojResolveAssemblyReference.cache
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\obj\Debug\Delta_X_Software.Net.Form1.resources
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\obj\Debug\Delta_X_Software.Net.Properties.Resources.resources
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\obj\Debug\Delta X Software .Net.csproj.GenerateResource.Cache
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\obj\Debug\Delta_X_Software.Net.exe
+E:\Git\Delta X Community\Delta-X-Software\Delta X Software .Net\Delta X Software .Net\obj\Debug\Delta_X_Software.Net.pdb
