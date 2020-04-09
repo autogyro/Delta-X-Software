@@ -48,6 +48,13 @@
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.tbAccel = new System.Windows.Forms.TextBox();
+            this.label15 = new System.Windows.Forms.Label();
+            this.label14 = new System.Windows.Forms.Label();
+            this.btHome = new System.Windows.Forms.Button();
+            this.label16 = new System.Windows.Forms.Label();
+            this.lbAccel = new System.Windows.Forms.Label();
+            this.tbVel = new System.Windows.Forms.TextBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.cbPortList = new System.Windows.Forms.ComboBox();
             this.label8 = new System.Windows.Forms.Label();
@@ -65,19 +72,17 @@
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.tbW = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
-            this.btHome = new System.Windows.Forms.Button();
-            this.tbVel = new System.Windows.Forms.TextBox();
-            this.lbAccel = new System.Windows.Forms.Label();
-            this.label14 = new System.Windows.Forms.Label();
-            this.tbAccel = new System.Windows.Forms.TextBox();
-            this.label15 = new System.Windows.Forms.Label();
-            this.label16 = new System.Windows.Forms.Label();
+            this.pnDeltaXROS = new System.Windows.Forms.Panel();
+            this.groupBox7 = new System.Windows.Forms.GroupBox();
+            this.lbDebug = new System.Windows.Forms.Label();
+            this.btOpenROS = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox4.SuspendLayout();
             this.groupBox5.SuspendLayout();
             this.groupBox6.SuspendLayout();
+            this.groupBox7.SuspendLayout();
             this.SuspendLayout();
             // 
             // btConnect
@@ -104,23 +109,23 @@
             this.tbGcodeEditor.Location = new System.Drawing.Point(6, 41);
             this.tbGcodeEditor.Multiline = true;
             this.tbGcodeEditor.Name = "tbGcodeEditor";
-            this.tbGcodeEditor.Size = new System.Drawing.Size(373, 377);
+            this.tbGcodeEditor.Size = new System.Drawing.Size(373, 511);
             this.tbGcodeEditor.TabIndex = 2;
             // 
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.btExecute);
             this.groupBox1.Controls.Add(this.tbGcodeEditor);
-            this.groupBox1.Location = new System.Drawing.Point(12, 59);
+            this.groupBox1.Location = new System.Drawing.Point(12, 16);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(385, 509);
+            this.groupBox1.Size = new System.Drawing.Size(385, 613);
             this.groupBox1.TabIndex = 3;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "G-code Editor";
             // 
             // btExecute
             // 
-            this.btExecute.Location = new System.Drawing.Point(247, 437);
+            this.btExecute.Location = new System.Drawing.Point(245, 558);
             this.btExecute.Name = "btExecute";
             this.btExecute.Size = new System.Drawing.Size(134, 48);
             this.btExecute.TabIndex = 3;
@@ -229,7 +234,7 @@
             this.groupBox2.Controls.Add(this.label2);
             this.groupBox2.Controls.Add(this.tbTransmit);
             this.groupBox2.Controls.Add(this.label1);
-            this.groupBox2.Location = new System.Drawing.Point(769, 476);
+            this.groupBox2.Location = new System.Drawing.Point(966, 476);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(427, 153);
             this.groupBox2.TabIndex = 6;
@@ -287,12 +292,76 @@
             this.groupBox3.Controls.Add(this.button3);
             this.groupBox3.Controls.Add(this.label3);
             this.groupBox3.Controls.Add(this.button4);
-            this.groupBox3.Location = new System.Drawing.Point(768, 224);
+            this.groupBox3.Location = new System.Drawing.Point(965, 224);
             this.groupBox3.Name = "groupBox3";
             this.groupBox3.Size = new System.Drawing.Size(427, 242);
             this.groupBox3.TabIndex = 8;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Moving";
+            // 
+            // tbAccel
+            // 
+            this.tbAccel.Location = new System.Drawing.Point(264, 21);
+            this.tbAccel.Name = "tbAccel";
+            this.tbAccel.Size = new System.Drawing.Size(67, 22);
+            this.tbAccel.TabIndex = 8;
+            this.tbAccel.Text = "1200";
+            this.tbAccel.KeyDown += new System.Windows.Forms.KeyEventHandler(this.UpdateDeltaXValue);
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(179, 24);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(41, 17);
+            this.label15.TabIndex = 5;
+            this.label15.Text = "mm/s";
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(86, 21);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(17, 17);
+            this.label14.TabIndex = 5;
+            this.label14.Text = "V";
+            // 
+            // btHome
+            // 
+            this.btHome.Location = new System.Drawing.Point(264, 60);
+            this.btHome.Name = "btHome";
+            this.btHome.Size = new System.Drawing.Size(105, 42);
+            this.btHome.TabIndex = 0;
+            this.btHome.Text = "Home";
+            this.btHome.UseVisualStyleBackColor = true;
+            this.btHome.Click += new System.EventHandler(this.GoHome);
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(337, 24);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(49, 17);
+            this.label16.TabIndex = 5;
+            this.label16.Text = "mm/s2";
+            // 
+            // lbAccel
+            // 
+            this.lbAccel.AutoSize = true;
+            this.lbAccel.Location = new System.Drawing.Point(241, 21);
+            this.lbAccel.Name = "lbAccel";
+            this.lbAccel.Size = new System.Drawing.Size(17, 17);
+            this.lbAccel.TabIndex = 5;
+            this.lbAccel.Text = "A";
+            // 
+            // tbVel
+            // 
+            this.tbVel.Location = new System.Drawing.Point(109, 21);
+            this.tbVel.Name = "tbVel";
+            this.tbVel.Size = new System.Drawing.Size(64, 22);
+            this.tbVel.TabIndex = 8;
+            this.tbVel.Text = "200";
+            this.tbVel.KeyDown += new System.Windows.Forms.KeyEventHandler(this.UpdateDeltaXValue);
             // 
             // groupBox4
             // 
@@ -301,7 +370,7 @@
             this.groupBox4.Controls.Add(this.label8);
             this.groupBox4.Controls.Add(this.label6);
             this.groupBox4.Controls.Add(this.label7);
-            this.groupBox4.Location = new System.Drawing.Point(969, 15);
+            this.groupBox4.Location = new System.Drawing.Point(1166, 15);
             this.groupBox4.Name = "groupBox4";
             this.groupBox4.Size = new System.Drawing.Size(226, 133);
             this.groupBox4.TabIndex = 9;
@@ -358,7 +427,7 @@
             this.groupBox5.Controls.Add(this.btConnect);
             this.groupBox5.Controls.Add(this.lbConnectionState);
             this.groupBox5.Controls.Add(this.label5);
-            this.groupBox5.Location = new System.Drawing.Point(769, 16);
+            this.groupBox5.Location = new System.Drawing.Point(966, 16);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(194, 132);
             this.groupBox5.TabIndex = 10;
@@ -435,7 +504,7 @@
             this.groupBox6.Controls.Add(this.label12);
             this.groupBox6.Controls.Add(this.tbX);
             this.groupBox6.Controls.Add(this.label11);
-            this.groupBox6.Location = new System.Drawing.Point(769, 153);
+            this.groupBox6.Location = new System.Drawing.Point(966, 153);
             this.groupBox6.Name = "groupBox6";
             this.groupBox6.Size = new System.Drawing.Size(427, 65);
             this.groupBox6.TabIndex = 11;
@@ -459,75 +528,49 @@
             this.label12.TabIndex = 5;
             this.label12.Text = "W";
             // 
-            // btHome
+            // pnDeltaXROS
             // 
-            this.btHome.Location = new System.Drawing.Point(264, 60);
-            this.btHome.Name = "btHome";
-            this.btHome.Size = new System.Drawing.Size(105, 42);
-            this.btHome.TabIndex = 0;
-            this.btHome.Text = "Home";
-            this.btHome.UseVisualStyleBackColor = true;
-            this.btHome.Click += new System.EventHandler(this.GoHome);
+            this.pnDeltaXROS.Location = new System.Drawing.Point(121, 41);
+            this.pnDeltaXROS.Name = "pnDeltaXROS";
+            this.pnDeltaXROS.Size = new System.Drawing.Size(400, 300);
+            this.pnDeltaXROS.TabIndex = 12;
             // 
-            // tbVel
+            // groupBox7
             // 
-            this.tbVel.Location = new System.Drawing.Point(109, 21);
-            this.tbVel.Name = "tbVel";
-            this.tbVel.Size = new System.Drawing.Size(64, 22);
-            this.tbVel.TabIndex = 8;
-            this.tbVel.Text = "200";
-            this.tbVel.KeyDown += new System.Windows.Forms.KeyEventHandler(this.UpdateDeltaXValue);
+            this.groupBox7.Controls.Add(this.btOpenROS);
+            this.groupBox7.Controls.Add(this.lbDebug);
+            this.groupBox7.Controls.Add(this.pnDeltaXROS);
+            this.groupBox7.Location = new System.Drawing.Point(412, 16);
+            this.groupBox7.Name = "groupBox7";
+            this.groupBox7.Size = new System.Drawing.Size(536, 613);
+            this.groupBox7.TabIndex = 13;
+            this.groupBox7.TabStop = false;
+            this.groupBox7.Text = "ROS";
             // 
-            // lbAccel
+            // lbDebug
             // 
-            this.lbAccel.AutoSize = true;
-            this.lbAccel.Location = new System.Drawing.Point(241, 21);
-            this.lbAccel.Name = "lbAccel";
-            this.lbAccel.Size = new System.Drawing.Size(17, 17);
-            this.lbAccel.TabIndex = 5;
-            this.lbAccel.Text = "A";
+            this.lbDebug.Location = new System.Drawing.Point(9, 571);
+            this.lbDebug.Name = "lbDebug";
+            this.lbDebug.Size = new System.Drawing.Size(521, 35);
+            this.lbDebug.TabIndex = 13;
+            this.lbDebug.Text = "Debug: ";
             // 
-            // label14
+            // btOpenROS
             // 
-            this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(86, 21);
-            this.label14.Name = "label14";
-            this.label14.Size = new System.Drawing.Size(17, 17);
-            this.label14.TabIndex = 5;
-            this.label14.Text = "V";
-            // 
-            // tbAccel
-            // 
-            this.tbAccel.Location = new System.Drawing.Point(264, 21);
-            this.tbAccel.Name = "tbAccel";
-            this.tbAccel.Size = new System.Drawing.Size(67, 22);
-            this.tbAccel.TabIndex = 8;
-            this.tbAccel.Text = "1200";
-            this.tbAccel.KeyDown += new System.Windows.Forms.KeyEventHandler(this.UpdateDeltaXValue);
-            // 
-            // label15
-            // 
-            this.label15.AutoSize = true;
-            this.label15.Location = new System.Drawing.Point(179, 24);
-            this.label15.Name = "label15";
-            this.label15.Size = new System.Drawing.Size(41, 17);
-            this.label15.TabIndex = 5;
-            this.label15.Text = "mm/s";
-            // 
-            // label16
-            // 
-            this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(337, 24);
-            this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(49, 17);
-            this.label16.TabIndex = 5;
-            this.label16.Text = "mm/s2";
+            this.btOpenROS.Location = new System.Drawing.Point(12, 41);
+            this.btOpenROS.Name = "btOpenROS";
+            this.btOpenROS.Size = new System.Drawing.Size(103, 35);
+            this.btOpenROS.TabIndex = 14;
+            this.btOpenROS.Text = "Open ROS";
+            this.btOpenROS.UseVisualStyleBackColor = true;
+            this.btOpenROS.Click += new System.EventHandler(this.btOpenROS_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1208, 637);
+            this.ClientSize = new System.Drawing.Size(1405, 637);
+            this.Controls.Add(this.groupBox7);
             this.Controls.Add(this.groupBox6);
             this.Controls.Add(this.groupBox5);
             this.Controls.Add(this.groupBox4);
@@ -536,6 +579,8 @@
             this.Controls.Add(this.groupBox1);
             this.Name = "Form1";
             this.Text = "Delta X Software .Net";
+            this.Activated += new System.EventHandler(this.Form1_Activated);
+            this.Deactivate += new System.EventHandler(this.Form1_Deactivate);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
@@ -549,6 +594,7 @@
             this.groupBox5.PerformLayout();
             this.groupBox6.ResumeLayout(false);
             this.groupBox6.PerformLayout();
+            this.groupBox7.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -599,6 +645,10 @@
         private System.Windows.Forms.Label label16;
         private System.Windows.Forms.Label lbAccel;
         private System.Windows.Forms.TextBox tbVel;
+        private System.Windows.Forms.Panel pnDeltaXROS;
+        private System.Windows.Forms.GroupBox groupBox7;
+        private System.Windows.Forms.Label lbDebug;
+        private System.Windows.Forms.Button btOpenROS;
     }
 }
 

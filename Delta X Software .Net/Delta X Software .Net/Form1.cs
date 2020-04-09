@@ -9,11 +9,33 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.Ports;
 using System.Threading;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.IO;
 
 namespace Delta_X_Software.Net
 {
     public partial class Form1 : Form
     {
+        // ----------- Win32 API -------------
+        [DllImport("User32.dll")]
+        static extern bool MoveWindow(IntPtr handle, int x, int y, int width, int height, bool redraw);
+
+        internal delegate int WindowEnumProc(IntPtr hwnd, IntPtr lparam);
+        [DllImport("user32.dll")]
+        internal static extern bool EnumChildWindows(IntPtr hwnd, WindowEnumProc func, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        static extern int SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        private Process process;
+        private IntPtr unityHWND = IntPtr.Zero;
+
+        private const int WM_ACTIVATE = 0x0006;
+        private readonly IntPtr WA_ACTIVE = new IntPtr(1);
+        private readonly IntPtr WA_INACTIVE = new IntPtr(0);
+        // -----------------------------------
+
         SerialPort DeltaXPort;
         String ReceivedData;
         String TransmitedData;
@@ -22,6 +44,7 @@ namespace Delta_X_Software.Net
         String XHome = "";
         String YHome = "";
         String ZHome = "";
+
         public Form1()
         {
             InitializeComponent();
@@ -39,6 +62,59 @@ namespace Delta_X_Software.Net
             DeltaXPort.DataReceived += new SerialDataReceivedEventHandler(WhenDeltaXPortReceiveData);
 
             GcodeCommands = new List<String>();
+
+            //RunEmbedWindow(Directory.GetCurrentDirectory() + "/ROS/Delta X Ros.exe");
+            
+        }
+
+        bool IsROSRunning = false;
+
+        private void RunEmbedWindow(String filename)
+        {
+            try
+            {
+                process = new Process();
+                process.StartInfo.FileName = filename;
+                process.StartInfo.Arguments = "-parentHWND " + pnDeltaXROS.Handle.ToInt32() + " " + Environment.CommandLine;
+                process.StartInfo.UseShellExecute = true;
+                process.StartInfo.CreateNoWindow = true;
+
+                process.Start();
+
+                process.WaitForInputIdle();
+                // Doesn't work for some reason ?!
+                //unityHWND = process.MainWindowHandle;
+                EnumChildWindows(pnDeltaXROS.Handle, WindowEnum, IntPtr.Zero);
+
+                Task.Delay(500).ContinueWith(t =>
+                {
+                    MoveWindow(unityHWND, 0, 0, pnDeltaXROS.Width, pnDeltaXROS.Height, true);
+                    ActivateUnityWindow();
+                });
+
+                IsROSRunning = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message + ".\nCheck if DeltaXRos.exe is placed next to Delta_X_Software.Net.exe.");
+            }
+        }
+
+        private int WindowEnum(IntPtr hwnd, IntPtr lparam)
+        {
+            unityHWND = hwnd;
+            ActivateUnityWindow();
+            return 0;
+        }
+
+        private void ActivateUnityWindow()
+        {
+            SendMessage(unityHWND, WM_ACTIVATE, WA_ACTIVE, IntPtr.Zero);
+        }
+
+        private void DeactivateUnityWindow()
+        {
+            SendMessage(unityHWND, WM_ACTIVATE, WA_INACTIVE, IntPtr.Zero);
         }
 
         private void WhenDeltaXPortReceiveData(object sender, SerialDataReceivedEventArgs e)
@@ -299,6 +375,28 @@ namespace Delta_X_Software.Net
             }
 
             return value;
+        }
+
+        private void Form1_Activated(object sender, EventArgs e)
+        {
+            ActivateUnityWindow();
+        }
+
+        private void Form1_Deactivate(object sender, EventArgs e)
+        {
+            DeactivateUnityWindow();
+        }
+
+        private void btOpenROS_Click(object sender, EventArgs e)
+        {
+            if (IsROSRunning == false)
+            {
+                RunEmbedWindow(Directory.GetCurrentDirectory() + "/ROS/Delta X Ros.exe");
+            }
+            else
+            {
+                DeactivateUnityWindow();
+            }
         }
     }
 }
