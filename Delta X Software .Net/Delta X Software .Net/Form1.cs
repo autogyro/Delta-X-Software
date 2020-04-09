@@ -389,9 +389,12 @@ namespace Delta_X_Software.Net
 
         private void btOpenROS_Click(object sender, EventArgs e)
         {
+            MessageBox.Show("ROS feature is not yet active. This program is just a basic example.");
+            return;
+
             if (IsROSRunning == false)
             {
-                RunEmbedWindow(Directory.GetCurrentDirectory() + "/ROS/Delta X Ros.exe");
+                RunEmbedWindow(Directory.GetCurrentDirectory() + "/ROS/Delta X Ros.exe");                
             }
             else
             {
