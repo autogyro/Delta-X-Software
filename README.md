@@ -1,2 +1,9 @@
 # Delta-X-Software
-Delta X Software will be open-source in March 2020
+
+Delta X Robot Kit is an open source delta robot created by IMWI Technology, a Vietnamese startup company.
+
+Website: https://www.deltaxrobot.com/
+
+Community: https://www.facebook.com/groups/DeltaXCommunity/
+
+
