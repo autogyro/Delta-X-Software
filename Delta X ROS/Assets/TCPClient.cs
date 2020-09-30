@@ -88,7 +88,7 @@ public class TCPClient : MonoBehaviour
                 byte[] clientMessageAsByteArray = Encoding.ASCII.GetBytes(clientMessage);
                 // Write byte array to socketConnection stream.                 
                 stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
-                Debug.Log(clientMessage);
+                //Debug.Log(clientMessage);
                 return true;
             }
         }

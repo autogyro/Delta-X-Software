@@ -28,6 +28,7 @@ public class CameraMovement : MonoBehaviour
         }
         if (Input.GetMouseButton(0))
         {
+
         }
         else if (Input.GetMouseButton(1))
         {

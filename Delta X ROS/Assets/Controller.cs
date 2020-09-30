@@ -16,15 +16,17 @@ public class Controller : MonoBehaviour {
     public GameObject SuctionCup;
     public Camera MainCamera;
 
-    Vector3 InitTrianglePosition;
-    Vector3 TrianglePosition;
-    Vector3 TriangleRelativePosition;
-    
+    public Vector3 InitTrianglePosition;
+    public Vector3 TrianglePosition;
+    public Vector3 TriangleRelativePosition;
+    public DrawLines GroundDrawLines;
+        
     MoveTriangle TriangleScriptObject;
     public float distanceToZHome = 0.065f;
     Vector3 TriangleHomePosition;
 
     float feedrate = 0.2f;
+    float RealRobotZHome = -200.0f;
 
     string server = "localhost";
     int port = 8844;
@@ -38,9 +40,14 @@ public class Controller : MonoBehaviour {
     public bool isZFreeze = false;
 
     private bool isMoveTriangle = false;
+    private bool isMoveFollowArc = false;
     private Vector3 targetPosition;
 
     public bool isDeltaX = false;
+
+    string RunningGcodeType = "G28";
+
+    bool IsDrawing = false;
 
     void Awake()
     {
@@ -62,24 +69,93 @@ public class Controller : MonoBehaviour {
         InitHome();
 
         SetupClient();
+
+
+        //GroundDrawLines.StartPoint(0, 0);
+        //GroundDrawLines.NextPoint(0, 100);
+        //GroundDrawLines.NextPoint(10, 100);
+        //GroundDrawLines.NextPoint(10, 0);
+        //GroundDrawLines.NextPoint(20, 0);
+        //GroundDrawLines.NextPoint(20, 100);
+        //GroundDrawLines.EndPoint();
     }
 
     void Update()
     {
         string request = GetInput();
-        ProcessRequest(request);
+
+        string[] requests = request.Split('\n');
+        for (int i = 0; i < requests.Length; i++)
+        {
+            ProcessRequest(requests[i]);
+        }
+        
         UpdateMovingPlatformPosition();
+    }
+
+    void DrawLine()
+    {
+        if (CurrentEndEffector > 1)
+        {
+            if (IsDrawing == true)
+            {
+                GroundDrawLines.NextPoint(TriangleRelativePosition.x, TriangleRelativePosition.y);
+            }
+        }
     }
 
     private void UpdateMovingPlatformPosition()
     {
         if (isMoveTriangle == true)
         {
-            MovingPlatform.transform.localPosition = Vector3.MoveTowards(MovingPlatform.transform.localPosition, targetPosition, feedrate * Time.deltaTime);
-            if (MovingPlatform.transform.localPosition == targetPosition)
+            if (RunningGcodeType == "G01")
             {
-                isMoveTriangle = false;
-                SetOutput("Ok");
+                MovingPlatform.transform.localPosition = Vector3.MoveTowards(MovingPlatform.transform.localPosition, targetPosition, feedrate * Time.deltaTime);
+                if (MovingPlatform.transform.localPosition == targetPosition)
+                {
+                    DrawLine();
+
+                    isMoveTriangle = false;
+                    SetOutput("Ok");
+                }
+            }
+
+            if (RunningGcodeType == "G02" || RunningGcodeType == "G03")
+            {
+                if (RunningGcodeType == "G02")
+                    CurrentPhi -= (2*Math.PI)/360;
+                else
+                    CurrentPhi += (2 * Math.PI) / 360;
+
+                float targetX = (float) (RadiusArc * Math.Cos(CurrentPhi)) + ArcOrigin.x;
+                float targetY = (float) (RadiusArc * Math.Sin(CurrentPhi)) + ArcOrigin.y;
+
+                Debug.Log(CurrentPhi.ToString() + ", " + targetX.ToString() + ", " + targetY.ToString());
+
+                TriangleRelativePosition = new Vector3(targetX, targetY, TriangleRelativePosition.z);
+
+                DrawLine();
+
+                TrianglePosition = MovingPlatform.transform.localPosition;
+
+                TrianglePosition.x = TriangleHomePosition.x + targetX / 1000;
+                TrianglePosition.y = TriangleHomePosition.y + -targetY / 1000;
+                TrianglePosition.z = TriangleHomePosition.z + (TriangleRelativePosition.z - RealRobotZHome) / 1000;
+
+                MovingPlatform.transform.localPosition = Vector3.MoveTowards(MovingPlatform.transform.localPosition, TrianglePosition, feedrate * Time.deltaTime);
+
+                int curX = (int)(targetX);
+                int curY = (int)(targetY);
+                int tarX = (int)(targetPosition.x);
+                int tarY = (int)(targetPosition.y);
+
+                Debug.Log(curX.ToString() + ", " + curY.ToString() + ", " + tarX.ToString() + ", " + tarY.ToString());
+
+                if (curX == tarX && curY == tarY)
+                {
+                    isMoveTriangle = false;
+                    SetOutput("Ok");
+                }
             }
         }        
     }
@@ -104,18 +180,20 @@ public class Controller : MonoBehaviour {
         }        
 
         Socket.ConnectToTcpServer(server, port);
-    } 
+    }
 
     void InitHome()
     {
         TrianglePosition = MovingPlatform.transform.localPosition;
-        TriangleRelativePosition = Vector3.zero;
 
         TrianglePosition.z += distanceToZHome;
         TriangleHomePosition = TrianglePosition;
 
-        isMoveTriangle = true;
-        targetPosition = TrianglePosition;
+        TriangleRelativePosition = Vector3.zero;
+        TriangleRelativePosition.z = RealRobotZHome - distanceToZHome * 1000;
+
+        //isMoveTriangle = true;
+        //targetPosition = TrianglePosition;
     }
 
     void ProcessRequest(string request)
@@ -137,7 +215,7 @@ public class Controller : MonoBehaviour {
                 {
                     float x = TriangleRelativePosition.x;
                     float y = TriangleRelativePosition.y;
-                    float z = TriangleRelativePosition.z;
+                    float z = TriangleRelativePosition.z - RealRobotZHome;
 
                     for (int i = 2; i < words.Length; i++)
                     {
@@ -165,7 +243,7 @@ public class Controller : MonoBehaviour {
                         }
                     }
                     
-                    G01(x, y, z);
+                    G01(x, y, RealRobotZHome + z);
                 }
             }
 
@@ -174,7 +252,7 @@ public class Controller : MonoBehaviour {
                 if (words[1] == "object")
                 {
                     Debug.Log(request);
-                    ObjectManager.GetInstance().UpdateObject(words[2], new Vector3(float.Parse(words[3]), float.Parse(words[4]), float.Parse(words[5])), new Vector3(float.Parse(words[6]), float.Parse(words[7]), float.Parse(words[8])));
+                    ObjectManager.GetInstance().UpdateObject(words[2], new Vector3(float.Parse(words[3]), float.Parse(words[4]), float.Parse(words[5])), new Vector3(float.Parse(words[6]), float.Parse(words[7]), float.Parse(words[8])), float.Parse(words[9]));
                 }
                 if (words[1] == "end_effector")
                 {
@@ -183,6 +261,10 @@ public class Controller : MonoBehaviour {
                 if (words[1] == "camera_position")
                 {
                     ChangeCameraPosition(int.Parse(words[2]));
+                }
+                if (words[1] == "z_home")
+                {
+                    RealRobotZHome = float.Parse(words[2]);
                 }
             }
 
@@ -195,19 +277,117 @@ public class Controller : MonoBehaviour {
             {
                 if (words[1].ToLower() == "m03" || words[1].ToLower() == "m3")
                 {
-                    Debug.Log(request);
-                    M03();
+                    if (words.Length > 2)
+                    {
+                        float angle = int.Parse(words[2].Substring(1));
+
+                        if (angle == 0)
+                        {
+                            M05();
+                        }
+                        else
+                        {
+                            M03(angle);
+                        }                        
+                    }
+                    else
+                    {
+                        M03(255);
+                    }         
                 }
-                if (words[1].ToLower() == "m05" || words[1].ToLower() == "m5")
+                else if (words[1].ToLower() == "m05" || words[1].ToLower() == "m5")
                 {
                     Debug.Log(request);
                     M05();
                 }
-                if (words[1].ToLower() == "g28")
+                else if (words[1].ToLower() == "m360")
+                {
+                    Debug.Log(request);
+                    if (words[2][0] == 'E' || words[2][0] == 'e')
+                    {
+                        ChangeEndEffector(int.Parse(words[2].Substring(1)));
+                    }
+
+                    SetOutput("Ok");
+
+                }
+                else if (words[1].ToLower() == "g28")
                 {
                     G28();
                 }
 
+                else if (words[1].ToLower() == "g01" || words[1].ToLower() == "g1" || words[1].ToLower() == "g0" || words[1].ToLower() == "g00")
+                {
+                    float x = TriangleRelativePosition.x;
+                    float y = TriangleRelativePosition.y;
+                    float z = TriangleRelativePosition.z;
+
+                    for (int i = 2; i < words.Length; i++)
+                    {
+                        if (words[i][0] == 'X' || words[i][0] == 'x')
+                        {
+                            x = float.Parse(words[i].Substring(1));
+                        }
+                        if (words[i][0] == 'Y' || words[i][0] == 'y')
+                        {
+                            y = float.Parse(words[i].Substring(1));
+                        }
+                        if (words[i][0] == 'Z' || words[i][0] == 'z')
+                        {
+                            z = float.Parse(words[i].Substring(1));
+                        }
+                        if (words[i][0] == 'F' || words[i][0] == 'f')
+                        {
+                            feedrate = float.Parse(words[i].Substring(1)) / 1000;
+                        }
+                        
+                    }
+                    G01(x, y, z);
+                }
+                else if (words[1].ToLower() == "g02" || words[1].ToLower() == "g2" || words[1].ToLower() == "g03" || words[1].ToLower() == "g3")
+                {
+                    float I = 0, J = 0, X = 0, Y = 0;
+
+                    for (int i = 2; i < words.Length; i++)
+                    {
+                        if (words[i][0] == 'I')
+                        {
+                            I = float.Parse(words[i].Substring(1));
+                        }
+                        if (words[i][0] == 'J')
+                        {
+                            J = float.Parse(words[i].Substring(1));
+                        }
+                        if (words[i][0] == 'X')
+                        {
+                            X = float.Parse(words[i].Substring(1));
+                        }
+                        if (words[i][0] == 'Y')
+                        {
+                            Y = float.Parse(words[i].Substring(1));
+                        }
+                        if (words[i][0] == 'F')
+                        {
+                            feedrate = float.Parse(words[i].Substring(1)) / 1000;
+                        }
+
+                    }
+
+                    if (words[1].ToLower() == "g02" || words[1].ToLower() == "g2")
+                        G02(I, J, X, Y);
+                    else
+                        G03(I, J, X, Y);
+                }
+                else
+                {
+                    SetOutput("Ok");
+                    Debug.Log("No move Ok");
+                }
+
+            }
+            else
+            {
+                
             }
             if (words[0] == "deltax")
             {
@@ -243,39 +423,123 @@ public class Controller : MonoBehaviour {
     }
 
     public void G01(float x, float y, float z)
-    {
+    {        
         TriangleRelativePosition = new Vector3(x, y, z);
         TrianglePosition = MovingPlatform.transform.localPosition;
 
         TrianglePosition.x = TriangleHomePosition.x + x / 1000;
-        TrianglePosition.y = TriangleHomePosition.y + y / 1000;
-        TrianglePosition.z = TriangleHomePosition.z + z / 1000;
+        TrianglePosition.y = TriangleHomePosition.y + -y / 1000;
+        TrianglePosition.z = TriangleHomePosition.z + (z - RealRobotZHome) / 1000;
 
         isMoveTriangle = true;
         targetPosition = TrianglePosition;
+
+        RunningGcodeType = "G01";
+    }
+
+    double CurrentPhi;
+    double TargetPhi;
+    Vector3 ArcOrigin;
+    double RadiusArc;
+
+    public void G02(float I, float J, float X, float Y)
+    {
+        ArcOrigin = new Vector3(I, J, TriangleRelativePosition.z);
+        RadiusArc = Math.Sqrt(Math.Pow((I - TriangleRelativePosition.x), 2) + Math.Pow((J - TriangleRelativePosition.y), 2));
+        double RadiusArc2 = Math.Sqrt(Math.Pow((I - X), 2) + Math.Pow((J - Y), 2));
+
+        if (Math.Abs(RadiusArc2 - RadiusArc) > 0.5)
+            return;
+
+        CurrentPhi = Math.Atan2((TriangleRelativePosition.y - J), (TriangleRelativePosition.x - I));
+        TargetPhi = Math.Atan2((Y - J), (X - I));
+
+        if (CurrentPhi < 0)
+        {
+            CurrentPhi += 2 * Math.PI;
+        }
+
+        if (TargetPhi < 0)
+        {
+            TargetPhi += 2 * Math.PI;
+        }
+
+
+        Debug.Log(RadiusArc.ToString() + ", " + CurrentPhi.ToString() + ", " + TargetPhi.ToString());
+
+        targetPosition.x = X;
+        targetPosition.y = Y;
+        
+        Debug.Log("X:" + targetPosition.x);
+
+        isMoveTriangle = true;
+
+        RunningGcodeType = "G02";
+    }
+
+    public void G03(float I, float J, float X, float Y)
+    {
+        G02(I, J, X, Y);
+
+        RunningGcodeType = "G03";
     }
 
     public void G28()
     {
-        TriangleRelativePosition = Vector3.zero;
-        TrianglePosition = TriangleHomePosition;
+        //TriangleRelativePosition = Vector3.zero;
+        //TrianglePosition = TriangleHomePosition;
 
-        isMoveTriangle = true;
-        targetPosition = TrianglePosition;
+        //isMoveTriangle = true;
+        //targetPosition = TrianglePosition;
+
+        G01(0, 0, RealRobotZHome);
     }
 
-    public void M03()
+    bool IsEndEffectorOpen = false;
+
+    IEnumerator RespondOkAfterTime(float time)
     {
-        SetGripperAngle(0);
+        yield return new WaitForSeconds(time);
+
+        SetOutput("Ok");
+    }
+
+    public void M03(float a)
+    {
+        IsEndEffectorOpen = true;
+        SetGripperAngle(a);
+
+        if (CurrentEndEffector > 1)
+        {
+            IsDrawing = true;
+            GroundDrawLines.StartPoint(TriangleRelativePosition.x, TriangleRelativePosition.y);
+        }
+
+        StartCoroutine(RespondOkAfterTime(0.3f));
     }
 
     public void M05()
     {
-        SetGripperAngle(45);
+        IsEndEffectorOpen = false;
+        SetGripperAngle(0);
+
+        if (CurrentEndEffector > 1)
+        {
+            IsDrawing = false;
+            GroundDrawLines.EndPoint();
+        }
+
+        StartCoroutine(RespondOkAfterTime(0.3f));
     }
 
     public void SetGripperAngle(float a)
     {
+        if (a > 100)
+        {
+            a = 100;
+        }
+
+        a = 100 - a;
         GripperL.transform.localEulerAngles = new Vector3(-a, 0, 0);
         GripperR.transform.localEulerAngles = new Vector3(a, 0, 0);
     }
@@ -284,20 +548,27 @@ public class Controller : MonoBehaviour {
     {
         Vector3 relative;
         relative.x = (pointPosition.x - TriangleHomePosition.x) * 1000;
-        relative.y = (pointPosition.y - TriangleHomePosition.y) * 1000;
+        relative.y = -(pointPosition.y - TriangleHomePosition.y) * 1000;
         relative.z = (pointPosition.z - TriangleHomePosition.z) * 1000;
+
+        TriangleRelativePosition.x = relative.x;
+        TriangleRelativePosition.y = relative.y;
+        TriangleRelativePosition.z = RealRobotZHome - relative.z;
 
         SetOutput("x " + Math.Round(relative.x, 1) + " y " + Math.Round(relative.y, 1) + " z " + Math.Round(relative.z, 1));
     }
 
     bool SetOutput(string msg)
     {
+        //Debug.Log("Send: " + msg);
         return Socket.SendMsg(msg + "\n");
     }
 
     string GetInput()
     {
-        return Socket.GetMessage();
+        string msg = Socket.GetMessage();
+        //Debug.Log("Receive: " + msg);
+        return msg;
     }
 
 
@@ -316,8 +587,12 @@ public class Controller : MonoBehaviour {
         isZFreeze = value;
     }
 
+    int CurrentEndEffector = 0;
+
     public void ChangeEndEffector(int value)
     {
+        CurrentEndEffector = value;
+
         if (value == 0)
         {
             Gripper.SetActive(false);

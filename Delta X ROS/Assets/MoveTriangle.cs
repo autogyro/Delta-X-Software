@@ -30,7 +30,7 @@ public class MoveTriangle : MonoBehaviour {
             {
                 isMoveTriangle = false;
             }
-        }       
+        }
         
         if (LaserPoint.transform.position.x != transform.position.x || LaserPoint.transform.position.z != transform.position.z)
         {

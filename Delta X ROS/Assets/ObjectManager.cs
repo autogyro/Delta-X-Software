@@ -19,6 +19,11 @@ public class ObjectManager : MonoBehaviour
             Instance.transform.localPosition = position;
         }
 
+        public void ChangeAngle(float angle)
+        {
+            Instance.transform.localEulerAngles = new Vector3(0, 0, angle);
+        }
+
         public void ChangeSize(Vector3 size)
         {
             Instance.transform.localScale = size;
@@ -41,8 +46,13 @@ public class ObjectManager : MonoBehaviour
 
     public static ObjectManager instance = null;
     public GameObject Product;
+    public GameObject Ground;
 
     Vector3 DeltaPosition;
+
+    public Vector3 calibOriginPoint = new Vector3(0, 0, 0);
+    public float objScale = 0.01f;
+
 
     void Awake()
     {
@@ -73,17 +83,28 @@ public class ObjectManager : MonoBehaviour
 
     }
 
-    public void UpdateObject(string name, Vector3 size, Vector3 position)
+    public void UpdateObject(string name, Vector3 size, Vector3 position, float angle)
     {
         // if not exit, creat one
-        
+        Debug.Log(name);
+        Debug.Log(size);
+        Debug.Log(position);
+
+        position += calibOriginPoint;
+        Vector3 unitySize = new Vector3(objScale * size.x, objScale * size.y, objScale * size.z);
+        Vector3 unityPosition = new Vector3(position.x * objScale, position.y * -objScale, position.z * objScale);
+
+        unityPosition.z = Ground.transform.localPosition.z + unitySize.z/2 + unityPosition.z + System.Math.Abs(Ground.transform.localScale.z/2);
+
+
         if (!IsObjectExit(name))
         {
             Debug.Log(name);
-            GameObject newObject = Instantiate(Product, position, Quaternion.identity);
+            GameObject newObject = Instantiate(Product, unityPosition, Quaternion.identity);
             newObject.transform.SetParent(this.transform);
             newObject.SetActive(true);
-            newObject.transform.localScale = size;
+            newObject.transform.localScale = unitySize;
+            newObject.transform.localEulerAngles = new Vector3(0, 0, angle);
             Object obj = new Object(name, newObject);
 
             ObjectList.Add(obj);
@@ -93,14 +114,22 @@ public class ObjectManager : MonoBehaviour
         {
             if (ObjectList[i].IsName(name))
             {
-                ObjectList[i].ChangePosition(position);
-                ObjectList[i].ChangeSize(size);
+                ObjectList[i].ChangePosition(unityPosition);
+                ObjectList[i].ChangeSize(unitySize);
+                ObjectList[i].ChangePosition(unityPosition);
+                ObjectList[i].ChangeAngle(angle);
             }
         }
     }
 
     public void DeleteObject(string name)
     {
+        if (name == "all")
+        {
+            DeleteAllObjects();
+            return;
+        }
+
         for (int i = 0; i < ObjectList.Count; i++)
         {
             if (ObjectList[i].IsName(name))
@@ -110,6 +139,15 @@ public class ObjectManager : MonoBehaviour
                 return;
             }
         }
+    }
+
+    public void DeleteAllObjects()
+    {
+        for (int i = 0; i < ObjectList.Count; i++)
+        {
+            Destroy(ObjectList[i].Instance);
+        }
+        ObjectList.Clear();
     }
 
     bool IsObjectExit(string name)
