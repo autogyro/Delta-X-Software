@@ -36,7 +36,7 @@ SOURCES += main.cpp\
     codeeditor.cpp \
         mainwindow.cpp \
     ConnectionManager.cpp \
-    DeltaVisualizer.cpp \  
+    DeltaVisualizer.cpp \
     GcodeProgramManager.cpp \
     GcodeProgram.cpp \
     UnityTool.cpp \
@@ -65,5 +65,5 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     hsvwindow.ui \
-	GcodeReference.ui \
-	
+        GcodeReference.ui \
+

@@ -39,6 +39,32 @@ public:
 		aValue->setFont(font2);
 	}
 
+	~ObjectVariable()
+	{
+		delete name;
+		delete xVar;
+		delete xValue;
+		delete yVar;
+		delete yValue;
+		delete aVar;
+		delete aValue;
+	}
+
+	void AddLayout(QGridLayout* layout, int row)
+	{
+		Layout = layout;
+
+		layout->addWidget(name, row, 0);
+		layout->addWidget(xVar, row, 1);
+		layout->addWidget(xValue, row, 2);
+		layout->addWidget(yVar, row, 3);
+		layout->addWidget(yValue, row, 4);
+		layout->addWidget(aVar, row, 5);
+		layout->addWidget(aValue, row, 6);
+	}
+	
+	QGridLayout* Layout;
+
 	QLabel *name;
 	QLabel *xVar;
 	QLabel *xValue;

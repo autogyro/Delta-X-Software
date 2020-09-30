@@ -9,15 +9,18 @@ ObjectVariableTable::ObjectVariableTable(QObject *parent)
 	dialog->setWindowTitle("Object Variables");
 	gridLayout = new QGridLayout();
 	dialog->setLayout(gridLayout);
+
+	dialog->setWindowFlags(Qt::WindowStaysOnTopHint);
 }
 
 ObjectVariableTable::~ObjectVariableTable()
 {
+
+
 }
 
 void ObjectVariableTable::UpdateTable(std::vector<cv::RotatedRect> ObjectContainer)
 {
-	// create more widget
 	for (int i = 0; i < ObjectContainer.size(); i++)
 	{
 		if (i > ObjectVariableWidgetList->size() - 1)
@@ -26,14 +29,7 @@ void ObjectVariableTable::UpdateTable(std::vector<cv::RotatedRect> ObjectContain
 
 			ObjectVariableWidgetList->push_back(ov);
 
-			gridLayout->addWidget(ov->name, i, 0);
-			gridLayout->addWidget(ov->xVar, i, 1);
-			gridLayout->addWidget(ov->xValue, i, 2);
-			gridLayout->addWidget(ov->yVar, i, 3);
-			gridLayout->addWidget(ov->yValue, i, 4);
-			gridLayout->addWidget(ov->aVar, i, 5);
-			gridLayout->addWidget(ov->aValue, i, 6);
-
+			ov->AddLayout(gridLayout, i);
 		}
 	}
 
@@ -52,14 +48,10 @@ void ObjectVariableTable::UpdateTable(std::vector<cv::RotatedRect> ObjectContain
 		ObjectVariableWidgetList->at(i)->aValue->setText(QString::number(angle));
 	}
 
-	if (ObjectContainer.size() < ObjectVariableWidgetList->size())
+	while (ObjectContainer.size() < ObjectVariableWidgetList->size())
 	{
-		for (int i = ObjectContainer.size(); i < ObjectVariableWidgetList->size(); i++)
-		{
-			ObjectVariableWidgetList->at(i)->xValue->setText("NULL");
-			ObjectVariableWidgetList->at(i)->yValue->setText("NULL");
-			ObjectVariableWidgetList->at(i)->aValue->setText("NULL");
-		}
+		delete ObjectVariableWidgetList->last();
+		ObjectVariableWidgetList->removeLast();
 	}
 }
 

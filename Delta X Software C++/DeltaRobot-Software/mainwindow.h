@@ -35,6 +35,8 @@
 #include <ROS.h>
 #include <QCloseEvent>
 #include <ObjectVariableTable.h>
+#include <QProcess>;
+#include <QSettings>;
 
 class MainWindow;
 class ImageProcesser;
@@ -59,7 +61,7 @@ public:
 	void AddInstance(QList<MainWindow*>* deltaXMainWindows = NULL);
 	void closeEvent(QCloseEvent *event);
 	
-	ConnectionManager* DeltaPort;
+	ConnectionManager* DeltaConnectionManager;
 	GcodeProgramManager* DeltaGcodeManager;
 	DeltaVisualizer *Delta2DVisualizer;
 	ImageProcesser* DeltaImageProcesser;
@@ -67,8 +69,6 @@ public:
 	ObjectVariableTable* TrackingObjectTable;
 
 	ConnectionManager* CurrentDeltaPort;
-
-	TCPConnectionManager* TCPConnection;
 
 	ROS* DeltaXROS;
 
@@ -84,9 +84,11 @@ public:
 	QString Name = "Delta X 1";
 
 	QNetworkAccessManager *HttpManager;
-	QString SoftwareVersion = "0.9.2";
+	QString SoftwareVersion = "0.9.5";
 
-	private slots:
+	float UIScale = 1;
+
+private slots:
 	void ConnectDeltaRobot();
 	void AddNewProgram();
 	void SaveProgram();
@@ -100,8 +102,8 @@ public:
 	void UpdateZLineEditValue(int z);
 	void UpdateWLineEditValue(int w);
 	void UpdateDeltaPositionFromLineEditValue();
-	void UpdatePositionFrom2DControl(float x, float y, float z, float w);
-	void UpdatePositionFrom3DControl(float x, float y, float z, float w);
+	void UpdateTextboxFrom2DControl(float x, float y, float z, float w);
+	void UpdateTextboxFrom3DControl(float x, float y, float z, float w);
 	void UpdatePositionControl(float x, float y, float z, float w, float f, float a);
 	void UpdateGlobalHomePositionValueAndControlValue(float x, float y, float z, float w);
 	void UpdateVelocity();
@@ -119,10 +121,14 @@ public:
 	void AddGcodeLine();
 	void ChangeGcodeParameter();
 
-	void AddConvenyorToROS();
+	void UpdateDetectObjectSize();
+
+	void UpdateCursorPosition(int x, int y);
 
 	void ConnectConveyor();
 	void SetConveyorMode(int mode);
+	void SetConveyorMovingMode(int mode);
+	void SetSpeedOfPositionMode();
 	void MoveConveyor();
 
 	void ProcessShortcutKey();	
@@ -133,6 +139,10 @@ public:
 	void DisableSliding();
 	void SetSlidingSpeed();
 	void SetSlidingPosition();
+
+	void ConnectExternalMCU();
+	void TransmitTextToExternalMCU();
+	void DisplayTextFromExternalMCU(QString text);
 
 	void TerminalTransmit();
 	void PrintReceiveData(QString msg);
@@ -153,8 +163,17 @@ public:
 	void ExportBlocklyToGcode();
 
 	void OpenROS();
-	void ROSResponse();
 	void ChangeROSCameraView(int index);
+	void ChangeEndEffector(int index);
+	void ChangeRobotVersion(int index);
+	void AddObjectsToROS(std::vector<cv::RotatedRect> ObjectContainer);
+	void DeleteAllObjectsInROS();
+
+	void ScaleUI();
+
+	void ExecuteRequestsFromExternal(QString request);
+
+	void ChangeParentForWidget(bool state);
 
 private:
 
@@ -162,6 +181,8 @@ private:
 	QString boldPlusKey(QString key, QString plus, QString htmlText);
 	QString italyKey(QString key, QString htmlText);
 	QString replaceHtmlSection(QString start, int offset, int maxlen, QString finish, QString beforeSection, QString afterSection, QString htmlText);
+
+	bool OpenConnectionDialog(QSerialPort* comPort, QTcpSocket* socket,QPushButton* connectButton);
 
 	void initTabs();
 	void hideExampleWidgets();

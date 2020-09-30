@@ -1,8 +1,11 @@
 #pragma once
+#include <QApplication>
+
+#ifdef Q_OS_WIN
 
 #include <QMainWindow>
 
-# include <QtCore/qt_windows.h>
+#include <QtCore/qt_windows.h>
 
 #include <QObject>
 #include <qframe.h>
@@ -24,9 +27,7 @@ class ROS : public QObject
 
 public:
 	ROS(QObject *parent, QFrame* panel, QString app);
-	~ROS();
-
-	
+	~ROS();	
 		
 public slots:
 	void Run();
@@ -55,3 +56,5 @@ private:
 	void initROS();
 	bool isRunning = false;
 };
+
+#endif // Q_OS_WIN

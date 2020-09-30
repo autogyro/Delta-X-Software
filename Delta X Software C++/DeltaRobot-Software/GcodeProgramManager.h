@@ -58,7 +58,7 @@ public:
 	CodeEditor* pteGcodeArea;
 	QPushButton* pbExecuteGcodes;
 
-	GcodeProgram* SelectingProgram = NULL;
+	GcodeProgram* selectingProgram = NULL;
 	int ProgramCounter = 0;
 	QVector<GcodeProgram*>* ProgramList = NULL;
 
@@ -75,6 +75,7 @@ public slots:
 	void RefreshGcodeProgramList();
 	void TransmitNextGcode();
 	void UpdateSystemVariable(QString name, float value);
+	void RespondVariableValue(QIODevice* sender, QString name);
 	void SetStartingGcodeEditorCursor(QString value);
 
 signals:
@@ -82,6 +83,12 @@ signals:
 	void JustUpdateVariable(QList<GcodeVariable> gcodeVariables);
 	void MoveToNewPosition(float x, float y, float z, float w, float f, float a);
 	void FinishExecuteGcodes();
+
+	void DeleteAllObjects();
+	void DeleteObject1();
+	void PauseCamera();
+	void CaptureCamera();
+	void ResumeCamera();
 
 private:
 	ConnectionManager* deltaConnection;

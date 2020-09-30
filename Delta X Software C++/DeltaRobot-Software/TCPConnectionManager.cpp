@@ -1,71 +1,71 @@
 #include "TCPConnectionManager.h"
 
-TCPConnectionManager::TCPConnectionManager(QObject *parent)
-	: QObject(parent)
+TCPConnectionManager::TCPConnectionManager()
 {
-	tcpServer = new QTcpServer();
-	connect(tcpServer, SIGNAL(newConnection()), this, SLOT(CreatNewConnection()));
+	TcpServer = new QTcpServer();
+	connect(TcpServer, SIGNAL(newConnection()), this, SLOT(CreatNewConnection()));
 	
-	RosSocketList = new QList<ROSConnection*>();
+	ClientList = new QList<Client*>();
+
+	TcpClients = new QList<QTcpSocket*>();
 }
 
 TCPConnectionManager::~TCPConnectionManager()
 {
 }
 
-void TCPConnectionManager::Connect()
+bool TCPConnectionManager::OpenServer()
 {
-	tcpServer->listen(QHostAddress(serverName), port);
+	return TcpServer->listen(QHostAddress(ServerName), Port);
 }
 
-void TCPConnectionManager::Connect(QString s, int p)
+bool TCPConnectionManager::OpenServer(QString s, int p)
 {
-	serverName = s;
-	port = p;
+	ServerName = s;
+	Port = p;
 
-	Connect();
+	return OpenServer();
+}
+
+QString TCPConnectionManager::GetIP()
+{
+	QString localhostname = QHostInfo::localHostName();
+	QString localhostIP;
+	QList<QHostAddress> hostList = QHostInfo::fromName(localhostname).addresses();
+	foreach(const QHostAddress& address, hostList) {
+		if (address.protocol() == QAbstractSocket::IPv4Protocol && address.isLoopback() == false) {
+			 localhostIP = address.toString();
+			 return localhostIP;
+		}
+	}
 }
 
 void TCPConnectionManager::ReadDataFromClients()
 {
-	QTcpSocket* socket = (QTcpSocket*) sender();
-	ReceivedString = socket->readAll();
 
-	QStringList datas = ReceivedString.split('\n');
-	for (int i = 0; i < datas.size(); i++)
-	{
-		processReceivedData(datas.at(i));
-	}
-	
 }
 
-void TCPConnectionManager::SendMessageToAll(QString msg)
+void TCPConnectionManager::SendMessageToROS(QString msg)
 {
-	if (RosSocketList == NULL)
+	if (ClientList == NULL)
 		return;
 
-	for (int i = 0; i < RosSocketList->count(); i++)
+	msg += "\n";
+
+	for (int i = 0; i < ClientList->count(); i++)
 	{
-		RosSocketList->at(i)->socket->write(msg.toLocal8Bit());
+		if (ClientList->at(i)->IsROS == true)
+		{
+			ClientList->at(i)->socket->write(msg.toStdString().c_str(), msg.size());
+		}		
 	}
 }
 
-void TCPConnectionManager::processReceivedData(QString data)
+void TCPConnectionManager::ProcessReceivedData(QString data)
 {	
 	if (data == "")
 		return;
 
-	if (data.at(0) == '#' && data.indexOf("="))
-	{
-		int symId = data.indexOf("=");
-		QString name = data.mid(0, symId).replace(" ", "");
-		float value = data.mid(symId + 1).replace(" ", "").toInt();
-		emit ReceiveVariableChangeCommand(name, value);
-	}
-	else if (data.mid(0, 2) == "Ok" || (data.indexOf('k') > -1 && data.indexOf('O') > -1))
-	{
-		emit ReceiveOk();
-	}
 	else if (data.indexOf('x') > -1 && data.indexOf('y') > -1 && data.indexOf('z') > -1)
 	{
 		QStringList datas = data.split(' ');
@@ -76,14 +76,17 @@ void TCPConnectionManager::processReceivedData(QString data)
 
 void TCPConnectionManager::CreatNewConnection()
 {
-	QTcpSocket* socket = tcpServer->nextPendingConnection();
+	QTcpSocket* socket = TcpServer->nextPendingConnection();
+
+	emit NewConnection(socket);
+
 	connect(socket, SIGNAL(readyRead()), this, SLOT(ReadDataFromClients()));
 
-	ROSConnection* rosConnection = new ROSConnection();
-	rosConnection->ID = RosSocketList->size();
+	Client* rosConnection = new Client();
+	rosConnection->ID = ClientList->size();
 	rosConnection->socket = socket;
 
-	RosSocketList->push_back(rosConnection);
+	ClientList->push_back(rosConnection);
 
 	socket->write("deltax");
 }

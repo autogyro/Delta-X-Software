@@ -9,74 +9,201 @@ CameraWidget::CameraWidget(QWidget *parent) :
 	mousePressed = false;
 	drawStarted = false;
 
-	//default is line
-	selectedTool = 1;
+	selectedTool = 0;
 
 	painter.setPen(Qt::red);
 	painter.setBrush(Qt::Dense2Pattern);
 
-	//InitParameter();
+	InitParameter();
 }
 
-void CameraWidget::mousePressEvent(QMouseEvent* event) {
-	//Mouse is pressed for the first time
+void CameraWidget::InitParameter()
+{
+	mLine.setP1(QPoint(100, 80));
+	mLine.setP2(QPoint(250, 80));
+
+	mRect.setTopLeft(QPoint(0, 0));
+	mRect.setBottomRight(QPoint(57, 127));
+
+	mPoint.setX(150);
+	mPoint.setY(230);
+
+	transformPoints[0] = QPoint(100, 100);
+	transformPoints[1] = QPoint(100, 200);
+	transformPoints[2] = QPoint(200, 200);
+	transformPoints[3] = QPoint(200, 100);
+
+	PselectedRectangle.setTopLeft(QPoint(40, 40));
+	PselectedRectangle.setBottomRight(QPoint(300, 250));
+
+	emit FinishMeasureSpace(sqrt(pow(mLine.x1() - mLine.x2(), 2) + pow(mLine.y1() - mLine.y2(), 2)));
+	emit FinishSelectCalibPoint(mPoint.x(), mPoint.y());
+	emit FinishDrawObject(mRect.x(), mRect.y(), mRect.height(), mRect.width());
+	emit FinishSelectPerspectivePoints(transformPoints[0], transformPoints[1], transformPoints[2], transformPoints[3]);
+	emit FinishSelectProcessRectangle(PselectedRectangle);
+	emit FinishSelectCalibLine(mLine.p1(), mLine.p2());
+
+	update();
+}
+
+void CameraWidget::ChangeSize(int w, int h)
+{
+	float ratio = (float)w / geometry().width();
+
+	// Update new values for calib points
+	mLine.setLine(mLine.x1() * ratio, mLine.y1() * ratio, mLine.x2() * ratio, mLine.y2() * ratio);
+
+	mPoint = mPoint * ratio;
+
+	PselectedRectangle.setRect(PselectedRectangle.x() * ratio, PselectedRectangle.y() * ratio, PselectedRectangle.width() * ratio, PselectedRectangle.height() * ratio);
+
+	mRect.setRect(mRect.x() * ratio, mRect.y() * ratio, mRect.width() * ratio, mRect.height() * ratio);
+	
+	transformPoints[0] = transformPoints[0] * ratio;
+	transformPoints[1] = transformPoints[1] * ratio;
+	transformPoints[2] = transformPoints[2] * ratio;
+	transformPoints[3] = transformPoints[3] * ratio;
+
+	// 
+	QRect size = geometry();
+	size.setWidth(w);
+	size.setHeight(h);
+	setGeometry(size);
+
+	QRect parrentSize = parentWidget()->geometry();
+	parrentSize.setWidth(w);
+	parrentSize.setHeight(h);
+	parentWidget()->setGeometry(parrentSize);
+
+	emit SizeChanged();
+
+	emit FinishMeasureSpace(sqrt(pow(mLine.x1() - mLine.x2(), 2) + pow(mLine.y1() - mLine.y2(), 2)));
+	emit FinishSelectCalibPoint(mPoint.x(), mPoint.y());
+	emit FinishDrawObject(mRect.x(), mRect.y(), mRect.height(), mRect.width());
+	emit FinishSelectPerspectivePoints(transformPoints[0], transformPoints[1], transformPoints[2], transformPoints[3]);
+	emit FinishSelectProcessRectangle(PselectedRectangle);
+	emit FinishSelectCalibLine(mLine.p1(), mLine.p2());
+}
+
+void CameraWidget::mousePressEvent(QMouseEvent* event) 
+{	
+	if (event->buttons() == Qt::RightButton)
+	{
+		selectedTool = 0;
+		setCursor(Qt::ArrowCursor);
+	}
+
 	mousePressed = true;
 
-	//set the initial line points, both are same
+	// ---------Catch event: adjusting transform points -------------
+	if (IsPerspectiveEnable == false)
+	{
+		transPointOrder = -1;
+		for (int i = 0; i < 4; i++)
+		{
+			if (abs(transformPoints[i].x() - event->pos().x()) < 5 && abs(transformPoints[i].y() - event->pos().y()) < 5)
+			{
+				transPointOrder = i;
+				lastSelectedTool = selectedTool;
+				lastCursorIcon = cursor().pixmap();
+
+				selectPerspectiveRectangle();
+
+				break;
+			}
+		}
+	}
+
+	// -----------Catch event: adjusting proessing rectangle -------------
+	processPointOrder = -1;
+	if (abs(PselectedRectangle.topLeft().x() - event->pos().x()) < 5 && abs(PselectedRectangle.topLeft().y() - event->pos().y()) < 5)
+	{
+		processPointOrder = 1;
+		
+		lastSelectedTool = selectedTool;
+		lastCursorIcon = cursor().pixmap();
+
+		selectProcessRectangle();
+	}
+
+	if (abs(PselectedRectangle.bottomRight().x() - event->pos().x()) < 5 && abs(PselectedRectangle.bottomRight().y() - event->pos().y()) < 5)
+	{
+		processPointOrder = 2;
+		lastSelectedTool = selectedTool;
+		lastCursorIcon = cursor().pixmap();
+
+		selectProcessRectangle();
+	}
+
+	//------------------------	
 	if (selectedTool == 1)
 	{
 		mRect.setTopLeft(event->pos());
 		mRect.setBottomRight(event->pos());
-		pointOrder = 0;
 	}
-	else if (selectedTool == 2)
+	if (IsMeasureDisplayEnable == true)
 	{
-		mLine.setP1(event->pos());
-		mLine.setP2(event->pos());
-		pointOrder = 0;
-	}
-	else if (selectedTool == 3)
-	{
-		mPoint = event->pos();
-		pointOrder = 0;
-
-		emit FinishSelectCalibPoint(mPoint.x(), mPoint.y());
-	}
-	else if (selectedTool == 4)
-	{
-		pointOrder++;
-		if (pointOrder > 3)
+		if (selectedTool == 2)
 		{
-			pointOrder = 0;
-		}
-		mPoints[pointOrder] = event->pos();
+			mLine.setP1(event->pos());
+			mLine.setP2(event->pos());
 
-		if (pointOrder == 3)
-		{
-			emit FinishSelectProcessRegion(mPoints[0], mPoints[1], mPoints[2], mPoints[3]);
+			emit FinishSelectCalibLine(mLine.p1(), mLine.p2());
 		}
-	}
+		if (selectedTool == 3)
+		{
+			mPoint = event->pos();
+
+			emit FinishSelectCalibPoint(mPoint.x(), mPoint.y());
+		}
+	}	
 }
 
-void CameraWidget::mouseMoveEvent(QMouseEvent* event) {
-
-	//As mouse is moving set the second point again and again
-	// and update continuously
+void CameraWidget::mouseMoveEvent(QMouseEvent* event) 
+{		
 	if (event->type() == QEvent::MouseMove) 
-	{
+	{	
 		if (selectedTool == 1) 
 		{
 			mRect.setBottomRight(event->pos());
 		}
-		else if (selectedTool == 2) 
+		if (IsMeasureDisplayEnable == true)
 		{
-			mLine.setP2(event->pos());
+			if (selectedTool == 2)
+			{
+				mLine.setP2(event->pos());
+				emit FinishSelectCalibLine(mLine.p1(), mLine.p2());
+			}
+
+			if (selectedTool == 3)
+			{
+				mPoint = event->pos();
+			}
 		}
-		else if (selectedTool == 3)
+		
+		if (selectedTool == 4)
 		{
-			mPoint = event->pos();
+			if (transPointOrder > -1)
+			{
+				transformPoints[transPointOrder] = event->pos();
+				emit FinishSelectPerspectivePoints(transformPoints[0], transformPoints[1], transformPoints[2], transformPoints[3]);
+			}
 		}
-	}
+
+		if (selectedTool == 5)
+		{
+			if (processPointOrder == 1)
+			{
+				PselectedRectangle.setTopLeft(QPoint(event->pos()));
+			}
+			else if (processPointOrder == 2)
+			{
+				PselectedRectangle.setBottomRight(QPoint(event->pos()));
+			}
+
+			FinishSelectProcessRectangle(PselectedRectangle);
+		}
+	}	
 
 	//it calls the paintEven() function continuously
 	update();
@@ -88,8 +215,17 @@ void CameraWidget::mouseReleaseEvent(QMouseEvent *event) {
 	mousePressed = false;
 	if (selectedTool == 1)
 		emit FinishDrawObject(mRect.x(), mRect.y(), mRect.height(), mRect.width());
-	if (selectedTool == 2)
-		emit FinishMeasureSpace(sqrt(pow(mLine.x1() - mLine.x2(), 2) + pow(mLine.y1() - mLine.y2(), 2)));
+	if (IsMeasureDisplayEnable == true)
+	{
+		if (selectedTool == 2)
+			emit FinishMeasureSpace(sqrt(pow(mLine.x1() - mLine.x2(), 2) + pow(mLine.y1() - mLine.y2(), 2)));
+	}
+	
+	if (selectedTool == 4)
+	{
+		selectedTool = lastSelectedTool;
+		setCursor(QCursor(lastCursorIcon));
+	}
 	update();
 }
 
@@ -107,54 +243,30 @@ void CameraWidget::paintEvent(QPaintEvent *event)
 	painter.begin(this);
 
 	QPainter tempPainter(&mPix);
-	tempPainter.setPen(Qt::red);
 
-	if (pointOrder > 0)
-	{
-		tempPainter.setPen(Qt::green);
+	//------ Display cursor center -----------
 
-		for (int i = 0; i < pointOrder; i++)
-		{
-			tempPainter.drawLine(mPoints[i], mPoints[i + 1]);
-		}
+	tempPainter.setPen(QPen(Qt::red, 5));
 
-		if (pointOrder == 3)
-			tempPainter.drawLine(mPoints[3], mPoints[0]);
+	curPosInWidget = mapFromGlobal(QCursor::pos());
+	tempPainter.drawPoint(curPosInWidget);
 
-		tempPainter.setPen(Qt::red);
-	}
-
-	tempPainter.drawLine(mLine);
-	tempPainter.setPen(QPen(Qt::red, 3));
-	tempPainter.drawPoint(mPoint);
-	tempPainter.drawEllipse(mPoint, 10, 10);
+	//
 
 	painter.drawPixmap(0, 0, mPix);
 
-	tempPainter.setPen(QPen(Qt::blue, 1));
+	tempPainter.setPen(QPen(Qt::red, 1));
 
 	if (mousePressed) 
-	{
-		//if (overPix.size().height() < 50)
-		//overPix = QPixmap(this->size().width(), this->size().height());
-				
+	{				
 		if (selectedTool == 1)
+		{
 			tempPainter.drawRect(mRect);
-		else if (selectedTool == 2)
-			tempPainter.drawLine(mLine);
-		
-		tempPainter.drawPoint(mPoint);
-		tempPainter.drawEllipse(mPoint, 10, 10);
-			
-		//mPix = mergePixmap(mPix, overPix);
+		}
 
 		painter.drawPixmap(0, 0, mPix);
 
 		drawStarted = true;
-	}
-	else if (drawStarted)
-	{
-		
 	}
 
 	painter.end();	
@@ -162,46 +274,97 @@ void CameraWidget::paintEvent(QPaintEvent *event)
 
 CameraWidget::~CameraWidget()
 {
+
 }
-//only two button is on the ui btnLine and btnRect
+
 void CameraWidget::lineObject()
 {
 	selectedTool = 2;
+
+	QPushButton* bt = qobject_cast<QPushButton*>(sender());
+	changeToolIconInArea(bt->icon());
 }
 
 void CameraWidget::circleObject()
 {
 	selectedTool = 3;
+
+	QPushButton* bt = qobject_cast<QPushButton*>(sender());
+	changeToolIconInArea(bt->icon());
 }
 
-void CameraWidget::selectProcessRegion()
+void CameraWidget::selectPerspectiveRectangle()
 {
 	selectedTool = 4;
+
+	setCursor(Qt::ArrowCursor);
 }
 
-void CameraWidget::InitParameter()
+void CameraWidget::selectProcessRectangle()
 {
-	mLine.setP1(QPoint(34, 6));
-	mLine.setP2(QPoint(324, 8));
+	selectedTool = 5;
 
-	mRect.setTopLeft(QPoint(0, 0));
-	mRect.setBottomRight(QPoint(57, 127));
+	setCursor(Qt::ArrowCursor);
+}
 
-	mPoint.setX(166);
-	mPoint.setY(245);
+void CameraWidget::noTool()
+{
+	selectedTool = 0;
 
-	mPoints[0] = QPoint(34, 0);
-	mPoints[1] = QPoint(38, 300);
-	mPoints[2] = QPoint(330, 300);
-	mPoints[3] = QPoint(330, 0);
+	setCursor(Qt::ArrowCursor);
+}
+
+void CameraWidget::SaveSetting()
+{
+	QSettings settings("setting.ini", QSettings::IniFormat);
+	
+	settings.setValue("line", mLine);
+	settings.setValue("object", mRect);
+	settings.setValue("point", mPoint);
+	settings.setValue("transpoint1", transformPoints[0]);
+	settings.setValue("transpoint2", transformPoints[1]);
+	settings.setValue("transpoint3", transformPoints[2]);
+	settings.setValue("transpoint4", transformPoints[3]);
+
+	settings.setValue("rect", PselectedRectangle);
+}
+
+void CameraWidget::LoadSetting()
+{
+	QSettings settings("setting.ini", QSettings::IniFormat);
+
+	mLine = settings.value("line").toLine();
+
+	mRect = settings.value("object").toRect();
+
+	mPoint = settings.value("point").toPoint();
+
+	transformPoints[0] = settings.value("transpoint1").toPoint();
+	transformPoints[1] = settings.value("transpoint2").toPoint();
+	transformPoints[2] = settings.value("transpoint3").toPoint();
+	transformPoints[3] = settings.value("transpoint4").toPoint();
+
+	PselectedRectangle = settings.value("rect").toRect();
 
 	emit FinishMeasureSpace(sqrt(pow(mLine.x1() - mLine.x2(), 2) + pow(mLine.y1() - mLine.y2(), 2)));
 	emit FinishSelectCalibPoint(mPoint.x(), mPoint.y());
 	emit FinishDrawObject(mRect.x(), mRect.y(), mRect.height(), mRect.width());
-	emit FinishSelectProcessRegion(mPoints[0], mPoints[1], mPoints[2], mPoints[3]);
-
-	update();
+	emit FinishSelectPerspectivePoints(transformPoints[0], transformPoints[1], transformPoints[2], transformPoints[3]);
+	emit FinishSelectProcessRectangle(PselectedRectangle);
+	emit FinishSelectCalibLine(mLine.p1(), mLine.p2());
 }
+
+void CameraWidget::ChangeXCalibPoint(QString value)
+{
+	xCalibPoint = value.toInt();
+}
+
+void CameraWidget::ChangeYCalibPoint(QString value)
+{
+	yCalibPoint = value.toInt();
+}
+
+
 
 QPixmap CameraWidget::mergePixmap(QPixmap p1, QPixmap p2)
 {
@@ -226,7 +389,23 @@ QPixmap CameraWidget::mergePixmap(QPixmap p1, QPixmap p2)
 	return p3;
 }
 
+void CameraWidget::changeToolIconInArea(QIcon icon)
+{
+	QPixmap pm = icon.pixmap(40, 40);
+	QPixmap pm2 = QPixmap(40, 40);
+	pm2.fill(Qt::transparent);
+
+	QPainter painter(&pm2);
+	painter.drawPixmap(20, 20, pm);
+
+	QCursor cursorTarget = QCursor(pm2);
+	setCursor(cursorTarget);
+}
+
 void CameraWidget::rectObject()
 {
 	selectedTool = 1;
+
+	QPushButton* bt = qobject_cast<QPushButton*>(sender());
+	changeToolIconInArea(bt->icon());
 }

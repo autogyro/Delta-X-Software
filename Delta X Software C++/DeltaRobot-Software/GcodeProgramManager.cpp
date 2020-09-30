@@ -87,7 +87,7 @@ void GcodeProgramManager::AddNewProgram()
 	GcodeProgram* newProgram = new GcodeProgram(wgProgramContainer);
 	newProgram->SetPosition(10, 10);
 	newProgram->SetName(QString("program ") + QString::number(ProgramCounter + 1));
-	newProgram->GcodeData = "#" + QString::number(ProgramCounter);
+	newProgram->GcodeData = ";====Vision functions==========\n;M98 PpauseCamera\n;M98 PresumeCamera\n;M98 PcaptureCamera\n;M98 PdeleteFirstObject\n;M98 PclearObjects\n;========================\n\nG28";
 	newProgram->ID = 0;
 	ProgramList->push_front(newProgram);
 
@@ -279,6 +279,8 @@ bool GcodeProgramManager::findExeGcodeAndTransmit()
 		pteGcodeArea->highlightCurrentLine();
 	}
 
+	currentLine = currentLine.replace("  ", " ");
+
 	if (currentLine == "")
 	{
 		gcodeOrder += 1;
@@ -419,13 +421,12 @@ bool GcodeProgramManager::findExeGcodeAndTransmit()
 
 				SaveGcodeVariable(newVar);
 
-				if (GetVariableValue("#1010") == NULL_NUMBER && GetVariableValue("#1011") == NULL_NUMBER && GetVariableValue("#1012") == NULL_NUMBER)
+				if (GetVariableValue("#O1_X") == NULL_NUMBER && GetVariableValue("#O1_Y") == NULL_NUMBER && GetVariableValue("#O1_A") == NULL_NUMBER)
 				{
 					emit OutOfObjectVariable();
 				}
 
 				gcodeOrder++;
-				//TransmitNextGcode();
 				return false;
 			}
 
@@ -471,6 +472,41 @@ bool GcodeProgramManager::findExeGcodeAndTransmit()
 			if (valuePairs[i + 1].at(0) == 'P')
 			{
 				QString subProName = valuePairs[i + 1].mid(1);
+
+				if (subProName == "clearObjects")
+				{
+					emit DeleteAllObjects();
+					gcodeOrder++;
+					return false;
+				}
+
+				if (subProName == "deleteFirstObject")
+				{
+					emit DeleteObject1();
+					gcodeOrder++;
+					return false;
+				}
+
+				if (subProName == "pauseCamera")
+				{
+					emit PauseCamera();
+					gcodeOrder++;
+					return false;
+				}
+
+				if (subProName == "captureCamera")
+				{
+					emit CaptureCamera();
+					gcodeOrder++;
+					return false;
+				}
+
+				if (subProName == "resumeCamera")
+				{
+					emit ResumeCamera();
+					gcodeOrder++;
+					return false;
+				}
 
 				for (int order = 0; order < gcodeList.size(); order++)
 				{
@@ -530,14 +566,14 @@ bool GcodeProgramManager::findExeGcodeAndTransmit()
 		{
 			gcodeOrder++;
 			deltaConnection->ConveyorSend(transmitGcode);
-			return false;
+			return true;
 		}
 
 		if (isSlidingGcode(transmitGcode))
 		{
 			gcodeOrder++;
 			deltaConnection->SlidingSend(transmitGcode);
-			return false;
+			return true;
 		}
 		/*if (deltaConnection->IsConnect() == false && !isMovingGcode(transmitGcode))
 		{
@@ -548,7 +584,7 @@ bool GcodeProgramManager::findExeGcodeAndTransmit()
 
 	updatePositionIntoSystemVariable(transmitGcode);
 
-	deltaConnection->Send(transmitGcode);
+	deltaConnection->SendToRobot(transmitGcode);
 	gcodeOrder += 1;
 	return true;
 }
@@ -557,13 +593,13 @@ bool GcodeProgramManager::findExeGcodeAndTransmit()
 void GcodeProgramManager::SaveGcodeIntoFile()
 {
 	Debug("Save");
-	if (SelectingProgram == NULL)
+	if (selectingProgram == NULL)
 	{
 		Debug("No program is selected !");
 		return;
 	}		
 
-	QFile file(SelectingProgram->GetName() + ".dtgc");
+	QFile file(selectingProgram->GetName() + ".dtgc");
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
 	{
 		Debug("Cant not open file to save !");
@@ -573,8 +609,8 @@ void GcodeProgramManager::SaveGcodeIntoFile()
 	QTextStream out(&file);
 	out << pteGcodeArea->toPlainText();
 
-	SelectingProgram->GcodeData = pteGcodeArea->toPlainText();
-	SelectingProgram->CoutingGcodeLines();
+	selectingProgram->GcodeData = pteGcodeArea->toPlainText();
+	selectingProgram->CoutingGcodeLines();
 
 	Debug("Saved");
 }
@@ -584,8 +620,8 @@ void GcodeProgramManager::DeleteProgram(GcodeProgram* ptr)
 	QFile file(ptr->GetName() + ".dtgc");
 	file.remove();
 
-	if (ptr == SelectingProgram)
-		SelectingProgram = NULL;
+	if (ptr == selectingProgram)
+		selectingProgram = NULL;
 
 	int deleteID = ptr->ID;
 
@@ -606,7 +642,7 @@ void GcodeProgramManager::DeleteProgram(GcodeProgram* ptr)
 
 void GcodeProgramManager::EraserAllProgramItems()
 {
-	SelectingProgram = NULL;
+	selectingProgram = NULL;
 
 	for (int i = 0; i < ProgramList->size(); i++)
 	{
@@ -667,7 +703,7 @@ void GcodeProgramManager::TransmitNextGcode()
 
 			if (IsFromOtherGcodeProgram == true)
 			{
-				pteGcodeArea->setText(OutsideGcodeProgramManager->SelectingProgram->GcodeData);
+				pteGcodeArea->setText(OutsideGcodeProgramManager->selectingProgram->GcodeData);
 				emit FinishExecuteGcodes();
 				connect(deltaConnection, SIGNAL(DeltaResponeGcodeDone()), OutsideGcodeProgramManager, SLOT(TransmitNextGcode()));
 			}
@@ -694,6 +730,13 @@ void GcodeProgramManager::UpdateSystemVariable(QString name, float value)
 	emit JustUpdateVariable(gcodeVariables);
 }
 
+void GcodeProgramManager::RespondVariableValue(QIODevice* s, QString name)
+{
+	QString value = QString::number(GetVariableValue(name)) + '\n';
+
+	s->write(value.toStdString().c_str(), value.size());
+}
+
 void GcodeProgramManager::SetStartingGcodeEditorCursor(QString value)
 {
 	startingMode = value;
@@ -702,6 +745,8 @@ void GcodeProgramManager::SetStartingGcodeEditorCursor(QString value)
 
 float GcodeProgramManager::calculateExpressions(QString expression)
 {
+	expression = expression.replace("  ", " ");
+
 	int index = 0;
 	
 	while (1)
@@ -710,6 +755,7 @@ float GcodeProgramManager::calculateExpressions(QString expression)
 
 		int multiplyIndex = expression.indexOf('*');
 		int divideIndex = expression.indexOf('/');
+		int moduloIndex = expression.indexOf('%');
 		int plusIndex = expression.indexOf('+');
 		int subIndex = expression.indexOf("- ");
 
@@ -761,18 +807,19 @@ float GcodeProgramManager::calculateExpressions(QString expression)
 			 
 			continue;
 		}
-		else if ((multiplyIndex > -1 || divideIndex > -1 || plusIndex > -1 || subIndex > -1 || andIndex > -1 || orIndex > -1 || xorIndex > -1) && isNotNegative(expression))
+		else if ((multiplyIndex > -1 || divideIndex > -1 || moduloIndex > -1 || plusIndex > -1 || subIndex > -1 || andIndex > -1 || orIndex > -1 || xorIndex > -1) && isNotNegative(expression))
 		{
 			// 3 + 2 * 5 - 4 / 2			
 
 			int operaIndex = subIndex;
 
-			operaIndex = (multiplyIndex > -1) ? multiplyIndex : operaIndex;
-			operaIndex = (divideIndex > -1) ? divideIndex : operaIndex;
 			operaIndex = (plusIndex > -1) ? plusIndex : operaIndex;
 			operaIndex = (andIndex > -1) ? andIndex : operaIndex;
 			operaIndex = (orIndex > -1) ? orIndex : operaIndex;
 			operaIndex = (xorIndex > -1) ? xorIndex : operaIndex;
+			operaIndex = (multiplyIndex > -1) ? multiplyIndex : operaIndex;
+			operaIndex = (divideIndex > -1) ? divideIndex : operaIndex;
+			operaIndex = (moduloIndex > -1) ? moduloIndex : operaIndex;
 
 			QString value1S = getLeftWord(expression, operaIndex);
 			QString value2S = getRightWord(expression, operaIndex);
@@ -801,6 +848,16 @@ float GcodeProgramManager::calculateExpressions(QString expression)
 				resultS = QString::number(result);
 
 				operaExpression = value1S + " / " + value2S;
+			}
+			else if (moduloIndex > -1)
+			{
+				if (value2 != 0)
+					result = (int)value1 % (int)value2;
+				else
+					result = 0;
+				resultS = QString::number(result);
+
+				operaExpression = value1S + " % " + value2S;
 			}
 			else if (plusIndex > -1)
 			{
@@ -958,7 +1015,7 @@ void GcodeProgramManager::updatePositionIntoSystemVariable(QString statement)
 		return;
 	}
 
-	for each (QString pair in pairs)
+    foreach (QString pair, pairs)
 	{
 		QChar prefix = pair[0];
 		QString value = pair.mid(1);
@@ -1101,16 +1158,16 @@ void GcodeProgramManager::ChangeSelectingProgram(GcodeProgram * ptr)
 {
 	SaveGcodeIntoFile();
 
-	if (SelectingProgram != NULL && ptr != SelectingProgram)
+	if (selectingProgram != NULL && ptr != selectingProgram)
 	{
-		SelectingProgram->SetColor(DEFAULT_COLOR);
+		selectingProgram->SetColor(DEFAULT_COLOR);
 	}
 
 	Debug(QString("#") + QString::number(ptr->ID) + " is selected !");
 
-	SelectingProgram = ptr;
+	selectingProgram = ptr;
 
-	pteGcodeArea->setPlainText(SelectingProgram->GcodeData);
+	pteGcodeArea->setPlainText(selectingProgram->GcodeData);
 }
 
 
